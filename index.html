@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jogging Mathématique au Zoo (2e Cycle)</title>
+    <!-- Tailwind CSS pour le layout rapide et réactif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Police ludique -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Tone.js pour la génération de sons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        :root {
+            --zoo-green: #22c55e;
+            --zoo-dark-green: #16a34a;
+            --panel-border: #0f172a;
+            --bg-color: #e0f2fe;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(45deg, #bae6fd 25%, transparent 25%, transparent 75%, #bae6fd 75%, #bae6fd),
+                linear-gradient(45deg, #bae6fd 25%, transparent 25%, transparent 75%, #bae6fd 75%, #bae6fd);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .safari-panel {
+            background-color: #ffffff;
+            border: 6px solid var(--panel-border);
+            border-radius: 24px;
+            box-shadow: 8px 10px 0 rgba(15, 23, 42, 1);
+            color: var(--panel-border);
+            position: relative;
+        }
+
+        .game-btn {
+            background-color: #ffffff;
+            color: var(--panel-border);
+            border: 4px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 6px 0 var(--panel-border);
+            transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: left;
+            min-height: 80px;
+        }
+
+        .game-btn:active, .game-btn.pressed {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 var(--panel-border);
+        }
+
+        .game-btn:hover:not(:disabled) {
+            background-color: #fef08a;
+        }
+
+        .game-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.9;
+        }
+
+        .btn-correct {
+            background-color: var(--zoo-green) !important;
+            color: white !important;
+            animation: pulse-green 0.5s ease;
+        }
+
+        .btn-wrong {
+            background-color: #ef4444 !important;
+            color: white !important;
+            animation: shake 0.4s ease;
+        }
+
+        .choice-letter {
+            background-color: #f1f5f9;
+            border: 3px solid var(--panel-border);
+            border-radius: 10px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            box-shadow: 2px 2px 0 var(--panel-border);
+        }
+
+        .game-btn.btn-correct .choice-letter {
+            background-color: white;
+            color: var(--zoo-dark-green);
+        }
+
+        .game-btn.btn-wrong .choice-letter {
+            background-color: white;
+            color: #b91c1c;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); background-color: #22c55e; }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .pop-animation {
+            animation: pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .svg-container {
+            width: 100%;
+            max-width: 400px;
+            height: 150px;
+            margin: 0 auto;
+            background: #f8fafc;
+            border: 4px solid var(--panel-border);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            overflow: visible;
+        }
+
+        .progress-bar {
+            height: 24px;
+            background-color: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid var(--panel-border);
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #2563eb);
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 3px solid var(--panel-border);
+        }
+
+        #custom-modal {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .math-text {
+            font-weight: 900;
+            fill: #0f172a;
+            font-family: 'Nunito', sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- ÉCRAN D'ACCUEIL -->
+    <div id="start-screen" class="flex-1 flex flex-col justify-center items-center p-4 z-10 absolute inset-0 bg-[#e0f2fe]">
+        <div class="safari-panel p-8 md:p-12 text-center max-w-xl w-full pop-animation">
+            <div class="text-7xl mb-6">🏃‍♂️🐒🧠</div>
+            <h1 class="text-4xl md:text-5xl font-black mb-6 text-slate-800 tracking-wide uppercase">
+                Jogging Math !
+            </h1>
+            <p class="text-lg md:text-xl font-bold mb-8 text-slate-600">
+                Entraîne ton cerveau avec les animaux ! Multiplications (jusqu'à 5), additions et soustractions (0-100).
+            </p>
+            <button onclick="startGame()" class="game-btn w-full text-2xl !bg-[#fde047] hover:!bg-[#fef08a] justify-center text-slate-800 mx-auto">
+                DÉMARRER ! ▶️
+            </button>
+        </div>
+    </div>
+
+    <!-- ÉCRAN DE JEU -->
+    <div id="game-screen" class="hidden flex-1 flex flex-col p-2 sm:p-4 max-w-4xl mx-auto w-full z-10">
+        
+        <header class="flex justify-between items-center bg-white rounded-2xl p-4 mb-4 border-4 border-slate-900 shadow-[4px_4px_0_rgba(15,23,42,1)]">
+            <div class="flex items-center gap-2">
+                <span class="text-3xl">⭐</span>
+                <div class="text-2xl font-black text-slate-800" id="score-display">0</div>
+            </div>
+            <div class="flex-1 mx-4 max-w-xs">
+                <div class="text-sm font-black text-slate-700 text-center mb-1 uppercase tracking-wider">Question <span id="question-number">1</span>/20</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-bar"></div>
+                </div>
+            </div>
+            <button onclick="toggleSound()" id="sound-btn" class="text-3xl hover:scale-110 transition-transform">
+                🔊
+            </button>
+        </header>
+
+        <main class="flex-1 flex flex-col">
+            <div class="safari-panel p-6 sm:p-8 mb-6 pop-animation" id="question-panel">
+                <h2 id="question-text" class="text-2xl sm:text-3xl font-black text-center mb-6 text-slate-800">
+                    Trouve la réponse !
+                </h2>
+                
+                <div id="visual-container" class="svg-container mb-6 bg-slate-100">
+                    <!-- L'équation apparaîtra ici -->
+                </div>
+
+                <div class="flex justify-center">
+                    <button onclick="showHint()" class="game-btn !min-h-0 !py-2 !px-6 !text-lg !bg-sky-200 hover:!bg-sky-300 flex items-center gap-2">
+                        💡 Indice
+                    </button>
+                </div>
+            </div>
+
+            <div id="answers-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-8">
+                <!-- Boutons générés dynamiquement -->
+            </div>
+        </main>
+    </div>
+
+    <!-- ÉCRAN DE FIN -->
+    <div id="end-screen" class="hidden flex-1 flex flex-col justify-center items-center p-4 z-10 absolute inset-0 bg-[#e0f2fe]/90 backdrop-blur">
+        <div class="safari-panel p-8 text-center max-w-lg w-full pop-animation">
+            <h1 class="text-5xl font-black mb-4 text-slate-800 uppercase">Super Jogging !</h1>
+            <div id="stars-container" class="text-6xl mb-6 flex justify-center gap-2"></div>
+            <p class="text-2xl font-bold text-slate-600 mb-2">Score Final: <span id="final-score" class="text-sky-600 text-4xl font-black"></span></p>
+            <p id="feedback-msg" class="text-lg text-slate-700 mb-8 font-bold"></p>
+            
+            <button onclick="location.reload()" class="game-btn w-full text-xl !bg-green-400 hover:!bg-green-300 justify-center mx-auto">
+                Rejouer 🔄
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL (INDICE) -->
+    <div id="custom-modal" class="hidden fixed inset-0 z-50 flex justify-center items-center p-4">
+        <div class="safari-panel p-6 sm:p-8 max-w-sm w-full transform transition-transform scale-95 pop-animation text-center">
+            <div class="text-5xl mb-4">💡</div>
+            <h3 class="text-2xl font-black text-slate-800 mb-4" id="modal-title">Indice</h3>
+            <p class="text-lg text-slate-700 font-bold mb-6" id="modal-content">Contenu</p>
+            <button onclick="closeModal()" class="game-btn w-full !min-h-[50px] !bg-blue-400 hover:!bg-blue-300 justify-center text-white !py-2">
+                Compris !
+            </button>
+        </div>
+    </div>
+
+<script>
+    // Générateur d'équations SVG avec des animaux
+    function createMathSVG(animal, equation) {
+        return `<svg viewBox="0 0 400 120">
+                    <text x="60" y="85" font-size="65" text-anchor="middle">${animal}</text>
+                    <text x="240" y="82" font-size="52" class="math-text" text-anchor="middle">${equation}</text>
+                </svg>`;
+    }
+
+    const questions = [
+        // Multiplications (Tables de 2 à 5)
+        {
+            text: "Calcule le produit :",
+            hint: "Tu peux faire des bonds de 3 ou des bonds de 4. (3 + 3 + 3 + 3)",
+            svg: createMathSVG("🐒", "4 × 3 = ?"),
+            options: [{ text: "12", isCorrect: true }, { text: "7", isCorrect: false }, { text: "16", isCorrect: false }, { text: "14", isCorrect: false }]
+        },
+        {
+            text: "Trouve la réponse :",
+            hint: "Compte par bonds de 5 sept fois ! (5, 10, 15...)",
+            svg: createMathSVG("🐘", "7 × 5 = ?"),
+            options: [{ text: "35", isCorrect: true }, { text: "30", isCorrect: false }, { text: "40", isCorrect: false }, { text: "25", isCorrect: false }]
+        },
+        {
+            text: "Quel est le résultat ?",
+            hint: "C'est le double de 8.",
+            svg: createMathSVG("🦜", "8 × 2 = ?"),
+            options: [{ text: "16", isCorrect: true }, { text: "10", isCorrect: false }, { text: "18", isCorrect: false }, { text: "14", isCorrect: false }]
+        },
+        {
+            text: "Résous cette multiplication :",
+            hint: "4 fois 9, c'est presque 10 fois 4 moins un 4.",
+            svg: createMathSVG("🦒", "9 × 4 = ?"),
+            options: [{ text: "36", isCorrect: true }, { text: "32", isCorrect: false }, { text: "45", isCorrect: false }, { text: "28", isCorrect: false }]
+        },
+        {
+            text: "Quel est ce produit ?",
+            hint: "Fais 3 bonds de 6 (6, 12...)",
+            svg: createMathSVG("🦓", "6 × 3 = ?"),
+            options: [{ text: "18", isCorrect: true }, { text: "12", isCorrect: false }, { text: "24", isCorrect: false }, { text: "21", isCorrect: false }]
+        },
+        {
+            text: "Trouve la bonne réponse :",
+            hint: "La table de 5 finit toujours par 0 ou 5.",
+            svg: createMathSVG("🦁", "8 × 5 = ?"),
+            options: [{ text: "40", isCorrect: true }, { text: "35", isCorrect: false }, { text: "45", isCorrect: false }, { text: "30", isCorrect: false }]
+        },
+        {
+            text: "Calcule :",
+            hint: "Le double de 7, c'est 14. Quel est le double de 14 ?",
+            svg: createMathSVG("🦛", "7 × 4 = ?"),
+            options: [{ text: "28", isCorrect: true }, { text: "24", isCorrect: false }, { text: "32", isCorrect: false }, { text: "21", isCorrect: false }]
+        },
+        // Additions (< 100)
+        {
+            text: "Additionne ces nombres :",
+            hint: "Additionne d'abord les dizaines (40+30), puis les unités (5+2).",
+            svg: createMathSVG("🦩", "45 + 32 = ?"),
+            options: [{ text: "77", isCorrect: true }, { text: "67", isCorrect: false }, { text: "87", isCorrect: false }, { text: "75", isCorrect: false }]
+        },
+        {
+            text: "Fais l'addition :",
+            hint: "Attention, 8 + 4 fait plus de 10, tu as une retenue !",
+            svg: createMathSVG("🐢", "58 + 14 = ?"),
+            options: [{ text: "72", isCorrect: true }, { text: "62", isCorrect: false }, { text: "82", isCorrect: false }, { text: "68", isCorrect: false }]
+        },
+        {
+            text: "Combien ça fait en tout ?",
+            hint: "5 unités + 5 unités = 10, cela crée une nouvelle dizaine !",
+            svg: createMathSVG("🐸", "25 + 45 = ?"),
+            options: [{ text: "70", isCorrect: true }, { text: "60", isCorrect: false }, { text: "80", isCorrect: false }, { text: "65", isCorrect: false }]
+        },
+        {
+            text: "Trouve la somme :",
+            hint: "30 + 20 = 50. Ensuite, ajoute 6 + 8.",
+            svg: createMathSVG("🦉", "36 + 28 = ?"),
+            options: [{ text: "64", isCorrect: true }, { text: "54", isCorrect: false }, { text: "74", isCorrect: false }, { text: "62", isCorrect: false }]
+        },
+        {
+            text: "Additionne :",
+            hint: "19 c'est presque 20. Fais 53 + 20, puis enlève 1.",
+            svg: createMathSVG("🐍", "19 + 53 = ?"),
+            options: [{ text: "72", isCorrect: true }, { text: "62", isCorrect: false }, { text: "82", isCorrect: false }, { text: "70", isCorrect: false }]
+        },
+        {
+            text: "Calcule le total :",
+            hint: "Ici, ajoute simplement 3 dizaines à 47. Pas de retenue pour les unités !",
+            svg: createMathSVG("🦭", "47 + 30 = ?"),
+            options: [{ text: "77", isCorrect: true }, { text: "67", isCorrect: false }, { text: "87", isCorrect: false }, { text: "70", isCorrect: false }]
+        },
+        // Soustractions (< 100)
+        {
+            text: "Fais la soustraction :",
+            hint: "Enlève d'abord les dizaines (80 - 20), puis les unités (7 - 4).",
+            svg: createMathSVG("🐊", "87 - 24 = ?"),
+            options: [{ text: "63", isCorrect: true }, { text: "53", isCorrect: false }, { text: "73", isCorrect: false }, { text: "65", isCorrect: false }]
+        },
+        {
+            text: "Combien en reste-t-il ?",
+            hint: "Si tu as 50, enlève 10, ça fait 40. Enlève encore 5.",
+            svg: createMathSVG("🐅", "50 - 15 = ?"),
+            options: [{ text: "35", isCorrect: true }, { text: "25", isCorrect: false }, { text: "45", isCorrect: false }, { text: "30", isCorrect: false }]
+        },
+        {
+            text: "Calcule la différence :",
+            hint: "Enlève 10 (il reste 82), puis enlève encore 1.",
+            svg: createMathSVG("🐪", "92 - 11 = ?"),
+            options: [{ text: "81", isCorrect: true }, { text: "71", isCorrect: false }, { text: "91", isCorrect: false }, { text: "80", isCorrect: false }]
+        },
+        {
+            text: "Soustrais ces nombres :",
+            hint: "Attention, tu dois emprunter une dizaine car on ne peut pas faire 3 - 8 !",
+            svg: createMathSVG("🦘", "63 - 28 = ?"),
+            options: [{ text: "35", isCorrect: true }, { text: "45", isCorrect: false }, { text: "25", isCorrect: false }, { text: "30", isCorrect: false }]
+        },
+        {
+            text: "Trouve le reste :",
+            hint: "39 c'est presque 40. Fais 74 - 40 (34), puis rajoute 1 que tu avais enlevé en trop.",
+            svg: createMathSVG("🦨", "74 - 39 = ?"),
+            options: [{ text: "35", isCorrect: true }, { text: "45", isCorrect: false }, { text: "25", isCorrect: false }, { text: "30", isCorrect: false }]
+        },
+        {
+            text: "Calcule la réponse :",
+            hint: "Emprunte une dizaine ! Fais 80 - 40 = 40, mais tu as un emprunt, donc...",
+            svg: createMathSVG("🦥", "85 - 46 = ?"),
+            options: [{ text: "39", isCorrect: true }, { text: "49", isCorrect: false }, { text: "29", isCorrect: false }, { text: "31", isCorrect: false }]
+        },
+        {
+            text: "Quelle est la différence ?",
+            hint: "Enlève 20 à 60 (il reste 40), puis enlève encore 7.",
+            svg: createMathSVG("🦔", "60 - 27 = ?"),
+            options: [{ text: "33", isCorrect: true }, { text: "43", isCorrect: false }, { text: "23", isCorrect: false }, { text: "30", isCorrect: false }]
+        }
+    ];
+
+    let currentIndex = 0;
+    let score = 0;
+    let isSoundEnabled = true;
+    let isAnswering = false;
+    let shuffledQuestions = [];
+
+    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+    synth.volume.value = -8;
+
+    function playSound(type) {
+        if (!isSoundEnabled) return;
+        if (Tone.context.state !== 'running') Tone.context.resume();
+
+        const now = Tone.now();
+        if (type === 'correct') {
+            synth.triggerAttackRelease(["C5", "E5", "G5"], "8n", now);
+        } else if (type === 'wrong') {
+            synth.triggerAttackRelease(["C3", "Eb3"], "4n", now);
+        } else if (type === 'win') {
+            synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "2n", now);
+            setTimeout(() => synth.triggerAttackRelease("G5", "4n"), 300);
+        }
+    }
+
+    function toggleSound() {
+        isSoundEnabled = !isSoundEnabled;
+        document.getElementById('sound-btn').innerText = isSoundEnabled ? '🔊' : '🔇';
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    async function startGame() {
+        if (Tone.context.state !== 'running') await Tone.start();
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        
+        shuffledQuestions = shuffleArray([...questions]);
+        currentIndex = 0;
+        score = 0;
+        updateScore();
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        isAnswering = false;
+        const q = shuffledQuestions[currentIndex];
+        
+        document.getElementById('question-number').innerText = currentIndex + 1;
+        document.getElementById('progress-bar').style.width = `${((currentIndex) / questions.length) * 100}%`;
+        
+        document.getElementById('question-text').innerText = q.text;
+        document.getElementById('visual-container').innerHTML = q.svg;
+        
+        const panel = document.getElementById('question-panel');
+        panel.classList.remove('pop-animation');
+        void panel.offsetWidth;
+        panel.classList.add('pop-animation');
+
+        const grid = document.getElementById('answers-grid');
+        grid.innerHTML = '';
+        
+        const options = shuffleArray([...q.options]);
+        const letters = ['A', 'B', 'C', 'D'];
+        
+        options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'game-btn pop-animation';
+            btn.dataset.answerText = opt.text;
+            
+            btn.innerHTML = `
+                <div class="choice-letter font-black">${letters[index]}</div> 
+                <span class="flex-1 text-center font-black">${opt.text}</span>
+            `;
+            
+            btn.onclick = () => handleAnswer(opt.isCorrect, btn);
+            grid.appendChild(btn);
+        });
+    }
+
+    function handleAnswer(isCorrect, btnElement) {
+        if (isAnswering) return;
+        isAnswering = true;
+
+        const allButtons = document.querySelectorAll('#answers-grid .game-btn');
+        allButtons.forEach(b => b.disabled = true);
+
+        if (isCorrect) {
+            playSound('correct');
+            btnElement.classList.add('btn-correct');
+            score++;
+            updateScore();
+            setTimeout(() => { nextQuestion(); }, 1200);
+        } else {
+            playSound('wrong');
+            btnElement.classList.add('btn-wrong');
+            
+            allButtons.forEach(b => {
+                if (b.dataset.answerText === shuffledQuestions[currentIndex].options.find(o => o.isCorrect).text) {
+                    b.classList.add('btn-correct');
+                }
+            });
+
+            setTimeout(() => { nextQuestion(); }, 2500);
+        }
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        if (currentIndex < questions.length) {
+            loadQuestion();
+        } else {
+            endGame();
+        }
+    }
+
+    function updateScore() {
+        document.getElementById('score-display').innerText = score;
+    }
+
+    function showHint() {
+        const q = shuffledQuestions[currentIndex];
+        document.getElementById('modal-title').innerText = "Coup de pouce !";
+        document.getElementById('modal-content').innerText = q.hint;
+        document.getElementById('custom-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('custom-modal').classList.add('hidden');
+    }
+
+    function endGame() {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('end-screen').classList.remove('hidden');
+        document.getElementById('progress-bar').style.width = `100%`;
+        
+        playSound('win');
+        startConfetti();
+        
+        const finalScore = document.getElementById('final-score');
+        finalScore.innerText = `${score} / ${questions.length}`;
+        
+        const feedback = document.getElementById('feedback-msg');
+        const stars = document.getElementById('stars-container');
+        
+        let percentage = score / questions.length;
+        if (percentage >= 0.9) {
+            feedback.innerText = "Champion ! Ton cerveau est super rapide !";
+            stars.innerHTML = "⭐⭐⭐";
+        } else if (percentage >= 0.6) {
+            feedback.innerText = "Très bien ! Tu es sur la bonne voie !";
+            stars.innerHTML = "⭐⭐";
+        } else {
+            feedback.innerText = "Continue de pratiquer, tu vas y arriver !";
+            stars.innerHTML = "⭐";
+        }
+    }
+
+    function startConfetti() {
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particles = [];
+        const colors = ['#fde047', '#22c55e', '#38bdf8', '#ef4444', '#a855f7'];
+
+        for(let i=0; i<150; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                w: Math.random() * 10 + 5,
+                h: Math.random() * 10 + 5,
+                c: colors[Math.floor(Math.random() * colors.length)],
+                dy: Math.random() * 3 + 2,
+                dx: Math.random() * 2 - 1,
+                rot: Math.random() * 360,
+                rs: Math.random() * 5 - 2.5
+            });
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.y += p.dy;
+                p.x += p.dx;
+                p.rot += p.rs;
+
+                if (p.y > canvas.height) p.y = -10;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.x < 0) p.x = canvas.width;
+
+                ctx.save();
+                ctx.translate(p.x + p.w/2, p.y + p.h/2);
+                ctx.rotate(p.rot * Math.PI / 180);
+                ctx.fillStyle = p.c;
+                ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+                ctx.restore();
+            });
+            requestAnimationFrame(render);
+        }
+        render();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    }
+</script>
+</body>
+</html>
